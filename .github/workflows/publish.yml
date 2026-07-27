@@ -108,31 +108,7 @@ jobs:
           echo "::endgroup::"
           
           TAG="$VERSION"
-
-          #echo "::group::Old release delete"
-          #RELEASE_ID=$(curl -s -H "Authorization: token $TOKEN" \
-          #  https://api.github.com/repos/$REPO/releases/tags/$TAG)
-          #MESSAGE=$(echo "$RELEASE_ID" | jq -r '.message // empty')
-          #if [ "$MESSAGE" = "Not Found" ]; then
-          #  echo "Release with tag $TAG not found"
-          #else
-          #  RELEASE_ID =$(echo "RELEASE_ID" | jq -r '.id // empty')
-          #  
-          #  if [ "$RELEASE_ID" != "null" ]; then
-          #    echo "Deleting release ID $RELEASE_ID"
-          #    curl -s -X DELETE -H "Authorization: token $TOKEN" \
-          #      https://api.github.com/repos/$REPO/releases/$RELEASE_ID
-          #  fi
-          #fi
-          #echo "::endgroup::"
-          #
-          #echo "::group::Old tag delete"
-          #if git ls-remote --tags origin | grep -q "$TAG"; then
-          #  git tag -d "$TAG" || true
-          #  git push origin ":refs/tags/$TAG" || true
-          #fi
-          #echo "::endgroup::"
-
+          
           echo "::group::New tag created"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
           git tag $TAG
@@ -147,6 +123,7 @@ jobs:
           tag_name: ${{ steps.newtag.outputs.tag }}
           release_name: ${{ steps.newtag.outputs.tag }}
           body: ${{ steps.newtag.outputs.body }}
+          draft: true
         env:
           GITHUB_TOKEN: ${{ secrets._TOKEN }}
 
@@ -168,3 +145,10 @@ jobs:
             rm _config.txt
             gh release upload "$TAG" "$file" --repo "$REPO" --clobber
           done
+      - name: Publish release
+        if: steps.pub.outputs.exists == 'true'
+        uses: eregon/publish-release@v1
+        with:
+          release_id: ${{ steps.crelease.outputs.id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets._TOKEN }}
